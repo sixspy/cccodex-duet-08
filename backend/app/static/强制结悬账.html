@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>强制结悬账 · 对拍</title>
+  <link rel="stylesheet" href="/styles.css"/>
+</head>
+<body>
+  <div class="壳">
+    <header class="顶栏">
+      <div class="顶左">
+        <div class="牌名">对拍</div>
+        <div class="牌骨">左轨装载 → 右轨装载 → 同键对齐落差 → 单边悬账 → 对拍结论</div>
+      </div>
+      <nav class="管线">
+          <a href="/">对拍台</a>
+          <a href="/左轨.html">左轨流水</a>
+          <a href="/右轨.html">右轨流水</a>
+          <a href="/对齐差.html">对齐差表</a>
+          <a href="/悬账单.html">悬账单</a>
+          <a href="/对拍结论.html">对拍结论</a>
+          <a href="/强制结悬账.html" class="亮">强制结悬账</a>
+          <a href="/源登记.html">源登记</a>
+          <a href="/轨规.html">轨规</a>
+      </nav>
+    </header>
+    <main class="主">
+
+      <section class="行卡">
+        <h1>强制结悬账</h1>
+        <p class="说明">双源入库对齐后的人工结悬编排：点强制结悬须择定收口形态，悬账单与对拍结论同票。
+          与对齐跑数互斥，不做互斥双成功，不得未结已结双态。</p>
+        <div id="卡片"></div>
+      </section>
+
+      <section class="行卡 双栏">
+        <div>
+          <h2>结悬操作 · 详情</h2>
+          <div class="工具条">
+            <label>业务键 <input id="键" style="width:160px"/></label>
+            <button class="次" id="查">查结态</button>
+          </div>
+          <div class="工具条">
+            <label>收口形态
+              <select id="形态">
+                <option value="">（择定）</option>
+                <option value="保留">保留·留行加凭证</option>
+                <option value="删除">删除·清行留切流</option>
+              </select>
+            </label>
+            <label>结因 <input id="结因" style="width:180px" placeholder="值班强制结悬"/></label>
+            <label>操作人 <input id="操作人" style="width:90px" placeholder="值班"/></label>
+            <button id="结">强制结悬</button>
+          </div>
+          <pre class="报" id="报"></pre>
+        </div>
+        <div>
+          <h2>策略</h2>
+          <p class="说明">收口形态二选一，也可在此落定默认策略（写入轨规「强制结收口形态」）；结悬时未择形态则按策略。</p>
+          <ul class="说明">
+            <li><b>保留</b>：保留已结悬行加独立凭证——悬行状态已强制结仍可查，独立凭证钉结因，结论改读已结集。</li>
+            <li><b>删除</b>：物理删除悬行只留切流账册——悬表无行，切流账册回读结因；读引用不同。</li>
+          </ul>
+          <div class="工具条">
+            <label>默认策略
+              <select id="策略选">
+                <option value="">（未择定）</option>
+                <option value="保留">保留</option>
+                <option value="删除">删除</option>
+              </select>
+            </label>
+            <button class="次" id="存策略">存策略</button>
+          </div>
+          <pre class="报" id="策略报"></pre>
+        </div>
+      </section>
+
+      <section class="行卡">
+        <h2>结悬列表（凭证 + 切流）</h2>
+        <div class="工具条"><button class="次" id="刷">刷新</button></div>
+        <div id="表"></div>
+      </section>
+
+    </main>
+  </div>
+  <script src="/common.js"></script>
+  <script>
+(async () => {
+  const 键入 = document.getElementById("键");
+  键入.value = new URLSearchParams(location.search).get("键") || "";
+
+  const 刷卡片 = async () => {
+    const c = await get("/api/强制结悬账/卡片");
+    document.getElementById("卡片").innerHTML = 统计([
+      ["未结", c.未结], ["已强制结留档", c.已强制结留档],
+      ["凭证", c.凭证数], ["切流", c.切流数], ["已结集", c.已结集]
+    ]);
+  };
+  const 刷策略 = async () => {
+    const s = await get("/api/强制结悬账/策略");
+    document.getElementById("策略选").value = s.策略 || "";
+    document.getElementById("策略报").textContent = JSON.stringify(s, null, 2);
+  };
+  const 刷表 = async () => {
+    const rows = await get("/api/强制结悬账");
+    document.getElementById("表").innerHTML = 表(
+      ["类别","键","业务键","形态","结因","操作人","原悬边","原金额分","时刻","有效","悬表仍在"],
+      rows,
+      r => `<td>${徽(r.类别)}</td><td>${r.键}</td><td>${r.业务键}</td><td>${r.形态}</td>
+        <td>${r.结因}</td><td>${r.操作人}</td><td>${r.原悬边||"-"}</td><td>${r.原金额分}</td>
+        <td>${r.时刻}</td><td>${徽(r.有效)}</td><td>${徽(r.悬表是否仍在)}</td>`
+    );
+  };
+  const 全刷 = async () => { await 刷卡片(); await 刷策略(); await 刷表(); };
+
+  document.getElementById("查").onclick = async () => {
+    const r = await get("/api/强制结悬账/查?业务键=" + encodeURIComponent(键入.value));
+    document.getElementById("报").textContent = JSON.stringify(r, null, 2);
+  };
+  document.getElementById("结").onclick = async () => {
+    try {
+      const r = await post("/api/强制结悬账/结", {
+        业务键: 键入.value,
+        形态: document.getElementById("形态").value,
+        结因: document.getElementById("结因").value,
+        操作人: document.getElementById("操作人").value,
+      });
+      document.getElementById("报").textContent = JSON.stringify(r, null, 2);
+    } catch (e) {
+      document.getElementById("报").textContent = "结悬失败：" + e.message;
+    }
+    await 全刷();
+  };
+  document.getElementById("存策略").onclick = async () => {
+    const r = await post("/api/强制结悬账/策略", { 策略: document.getElementById("策略选").value });
+    document.getElementById("策略报").textContent = JSON.stringify(r, null, 2);
+    await 刷卡片();
+  };
+  document.getElementById("刷").onclick = 全刷;
+  await 全刷();
+  if (键入.value) document.getElementById("查").click();
+})();
+  </script>
+</body>
+</html>

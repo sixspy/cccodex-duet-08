@@ -20,6 +20,7 @@
           <a href="/对齐差.html">对齐差表</a>
           <a href="/悬账单.html" class="亮">悬账单</a>
           <a href="/对拍结论.html">对拍结论</a>
+          <a href="/强制结悬账.html">强制结悬账</a>
           <a href="/源登记.html">源登记</a>
           <a href="/轨规.html">轨规</a>
       </nav>
@@ -28,7 +29,8 @@
 
       <section class="行卡">
         <h1>悬账单</h1>
-        <p class="说明">对齐后仅单边有键（或需人工处理）的业务键。不是闸对/缝包那种「旁路匣」命名。</p>
+        <p class="说明">对齐后仅单边有键（或需人工处理）的业务键。不是闸对/缝包那种「旁路匣」命名。
+          未结行可点「强制结」转强制结悬账择定收口形态；已强制结留档行带凭证键，结论改读已结集。</p>
         <div class="工具条"><button class="次" id="刷">刷新</button></div>
       </section>
       <section class="行卡"><div id="表"></div></section>
@@ -41,10 +43,12 @@
   const paint = async () => {
     const rows = await get("/api/悬账单");
     document.getElementById("表").innerHTML = 表(
-      ["编号","业务键","悬边","金额分","事件编号","原因","时刻"],
+      ["编号","业务键","悬边","金额分","事件编号","原因","状态","凭证键","时刻","操作"],
       rows,
       r => `<td>${r.编号}</td><td>${r.业务键}</td><td>${徽(r.悬边)}</td><td>${r.金额分}</td>
-        <td>${r.事件编号||"-"}</td><td>${r.原因}</td><td>${r.时刻}</td>`
+        <td>${r.事件编号||"-"}</td><td>${r.原因}</td><td>${徽(r.状态||"未结")}</td>
+        <td>${r.凭证键||"-"}</td><td>${r.时刻}</td>
+        <td>${(r.状态||"未结")==="未结" ? `<a href="/强制结悬账.html?键=${encodeURIComponent(r.业务键)}">强制结→</a>` : "已结"}</td>`
     );
   };
   await paint();

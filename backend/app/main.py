@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from app import seed
 from app.routers import 路由
+from app.modules.强制结悬账.路由 import 路由 as 强制结悬账路由
 
 app = FastAPI(title="对拍", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -15,6 +16,7 @@ def _启动():
     seed.初始化库()
 
 app.include_router(路由)
+app.include_router(强制结悬账路由)
 
 @app.get("/login", response_class=HTMLResponse)
 def 登录页():
